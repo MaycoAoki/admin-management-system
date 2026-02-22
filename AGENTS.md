@@ -9,9 +9,10 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.3.11
+- php - 8.3.30
 - laravel/framework (LARAVEL) - v12
 - laravel/prompts (PROMPTS) - v0
+- laravel/sanctum (SANCTUM) - v4
 - laravel/boost (BOOST) - v2
 - laravel/mcp (MCP) - v0
 - laravel/pail (PAIL) - v1
@@ -19,12 +20,14 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/sail (SAIL) - v1
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
+- tailwindcss (TAILWINDCSS) - v4
 
 ## Skills Activation
 
 This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 - `pest-testing` — Tests applications using the Pest 4 PHP framework. Activates when writing tests, creating unit or feature tests, adding assertions, testing Livewire components, browser testing, debugging test failures, working with datasets or mocking; or when the user mentions test, spec, TDD, expects, assertion, coverage, or needs to verify functionality works.
+- `tailwindcss-development` — Styles applications using Tailwind CSS v4 utilities. Activates when adding styles, restyling components, working with gradients, spacing, layout, flex, grid, responsive design, dark mode, colors, typography, or borders; or when the user mentions CSS, styling, classes, Tailwind, restyle, hero section, cards, buttons, or any visual/UI changes.
 
 ## Conventions
 
@@ -227,4 +230,56 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - CRITICAL: ALWAYS use `search-docs` tool for version-specific Pest documentation and updated code examples.
 - IMPORTANT: Activate `pest-testing` every time you're working with a Pest or testing-related task.
 
+=== tailwindcss/core rules ===
+
+# Tailwind CSS
+
+- Always use existing Tailwind conventions; check project patterns before adding new ones.
+- IMPORTANT: Always use `search-docs` tool for version-specific Tailwind CSS documentation and updated code examples. Never rely on training data.
+- IMPORTANT: Activate `tailwindcss-development` every time you're working with a Tailwind CSS or styling-related task.
+
 </laravel-boost-guidelines>
+
+<prd-portal-cobranca>
+# PRD - Portal de Autoatendimento de Faturamento (resumo acionavel)
+
+## Visao e objetivos
+- Reduzir tickets de suporte oferecendo autoatendimento completo para faturas/pagamentos.
+- Aumentar satisfacao e retencao permitindo controle de dados e planos, reduzindo churn involuntario.
+- Gerar receita incremental com upgrades/add-ons/assentos extras.
+- Encurtar ciclo de cobranca via pay-now e autopagamento.
+
+## Publicos prioritarios
+- Usuarios finais de SaaS/assinaturas.
+- Clientes corporativos (contas a pagar, compras, fin/ops) e administradores internos que conciliam/monitoram faturamento.
+
+## Funcionalidades obrigatorias
+1) Dashboard: saldo devedor e proximos vencimentos; historico de faturas/pagamentos com download PDF/CSV; opcionalmente detalhar consumo/uso.
+2) Pagamentos: pay-now de saldo ou fatura especifica ou valor custom; suportar cartao, boleto, PIX, debito; exibir taxas quando houver; permitir opt-in/out de autopagamento com token seguro.
+3) Gestao de assinatura: upgrade/downgrade com prorrata; renovacao manual ou automatica; cancelamento com avisos/regras; compra de add-ons/usuarios extras.
+4) Metodos de pagamento e dados: atualizar cartao/dados bancarios e definir metodo padrao; gerenciar contatos de cobranca e dados corporativos; exibir creditos/reembolsos/saldo de credito.
+5) Suporte e disputas: abrir disputa com anexos/comentarios; central de ajuda (FAQ/chatbot/canal de suporte); notificacoes de fatura vencida, falha de pagamento (dunning) e confirmacoes.
+6) Seguranca e conformidade: login seguro (SSO/MFA ou senha); armazenamento/tokenizacao conforme PCI; criptografia em transito e repouso; conformidade GDPR/LGPD; permissoes/roles para contas corporativas.
+
+## Requisitos nao funcionais
+- Performance responsiva (<2s) e mobile-first.
+- Escalavel para picos de cobranca; arquitetura com APIs.
+- Seguranca: protecao CSRF/XSS, monitoramento de acessos.
+- Usabilidade: acessivel (WCAG 2.1) e simples.
+- Localizacao: multilingue e multi-moeda; valores na moeda do usuario.
+- Integracao: expor APIs para CRM/ERP e gateways existentes (multi-gateway ja presente).
+
+## Historias de usuario (referencia)
+- Ver saldo e pagar fatura com cartao; baixar faturas 6 meses em PDF/CSV; mudar plano com cobranca proporcional; atualizar cartao expirado; cancelar com antecedencia e data efetiva; responder disputa e emitir reembolso parcial.
+
+## Metricas de sucesso
+- Adocao do portal vs. suporte; reducao de tickets; tempo medio entre emissao e pagamento; revenue uplift de upgrades/add-ons; NPS/satisfacao.
+
+## Cronograma alto nivel
+- Descoberta 1-2s; Design 3-4s; Dev Iteracao 1 (auth, dashboard, faturas/pagamentos) 4-6s; Iteracao 2 (gestao assinatura, autopagamento, disputas) 4-6s; Iteracao 3 (upsell, relatorios/CSV, integracoes) 3-4s; Testes/Ajustes 2s; Beta 2s; Lancamento oficial.
+
+## Riscos
+- Integracao multi-gateway e requisitos locais (LGPD/PCI).
+- Adocao pelos clientes (necessidade de educacao).
+- Picos de acesso em datas de cobranca.
+</prd-portal-cobranca>

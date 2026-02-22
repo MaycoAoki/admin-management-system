@@ -1,0 +1,134 @@
+# ================================
+# Stage 1: Builder (Dependencies)
+# ================================
+FROM php:8.3-fpm-alpine AS builder
+
+WORKDIR /var/www/html
+
+# Install system dependencies for building
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    libzip-dev \
+    zip \
+    libpng-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    postgresql-dev \
+    icu-dev \
+    $PHPIZE_DEPS
+
+# Install PHP extensions
+RUN docker-php-ext-install -j$(nproc) \
+        pdo_pgsql \
+        pgsql \
+        bcmath \
+        zip \
+        opcache \
+        intl \
+        pdo_mysql \
+        sockets
+
+# Install Redis extension
+RUN pecl install redis && \
+    docker-php-ext-enable redis
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install production dependencies only
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --no-scripts \
+    --no-autoloader \
+    --prefer-dist \
+    --optimize-autoloader
+
+# Copy application code
+COPY . .
+
+# Generate optimized autoloader
+RUN composer dump-autoload --optimize --classmap-authoritative
+
+# ================================
+# Stage 2: Assets Builder (Node)
+# ================================
+FROM node:22-alpine AS assets
+
+WORKDIR /var/www/html
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install node dependencies
+RUN npm ci --only=production
+
+# Copy application code (needed for Vite)
+COPY . .
+
+# Build production assets
+RUN npm run build
+
+# ================================
+# Stage 3: Production Runtime
+# ================================
+FROM php:8.3-fpm-alpine
+
+WORKDIR /var/www/html
+
+# Install only runtime dependencies (no build tools)
+RUN apk add --no-cache \
+    bash \
+    curl \
+    libzip \
+    libpng \
+    oniguruma \
+    libxml2 \
+    freetype \
+    libjpeg-turbo \
+    postgresql-libs \
+    icu-libs
+
+# Copy PHP extensions from builder
+COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+
+# Copy application from builder
+COPY --from=builder --chown=www-data:www-data /var/www/html /var/www/html
+
+# Copy built assets from assets stage
+COPY --from=assets --chown=www-data:www-data /var/www/html/public/build /var/www/html/public/build
+
+# Create storage and cache directories
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache && \
+    chown -R www-data:www-data storage bootstrap/cache
+
+# Copy production PHP configuration
+COPY docker/php/php.prod.ini /usr/local/etc/php/php.ini
+COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Switch to non-root user
+USER www-data
+
+# Expose PHP-FPM port
+EXPOSE 9000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD php-fpm-healthcheck || exit 1
+
+# Start PHP-FPM
+CMD ["php-fpm"]
