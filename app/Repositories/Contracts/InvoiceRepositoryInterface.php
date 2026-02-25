@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Repositories\Contracts;
+
+use App\Models\Invoice;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+
+interface InvoiceRepositoryInterface
+{
+    /** @return LengthAwarePaginator<Invoice> */
+    public function paginateForUser(int $userId, int $perPage = 15): LengthAwarePaginator;
+
+    public function findById(int $id): ?Invoice;
+
+    public function findByInvoiceNumber(string $invoiceNumber): ?Invoice;
+
+    /** @return Collection<int, Invoice> */
+    public function openForUser(int $userId): Collection;
+
+    public function nextDueForUser(int $userId): ?Invoice;
+
+    public function outstandingBalanceForUser(int $userId): int;
+
+    /** @param array<string, mixed> $attributes */
+    public function create(array $attributes): Invoice;
+
+    /** @param array<string, mixed> $attributes */
+    public function update(Invoice $invoice, array $attributes): Invoice;
+}
