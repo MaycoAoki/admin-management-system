@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentMethodController;
+use App\Http\Controllers\Api\V1\PlanController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
@@ -30,6 +32,15 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::prefix('payments')->name('payments.')->group(function () {
             Route::get('/', [PaymentController::class, 'index'])->name('index');
             Route::get('{id}', [PaymentController::class, 'show'])->name('show');
+        });
+
+        Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+
+        Route::prefix('subscription')->name('subscription.')->group(function () {
+            Route::get('/', [SubscriptionController::class, 'show'])->name('show');
+            Route::post('/', [SubscriptionController::class, 'store'])->name('store');
+            Route::patch('plan', [SubscriptionController::class, 'changePlan'])->name('change-plan');
+            Route::delete('/', [SubscriptionController::class, 'cancel'])->name('cancel');
         });
 
         Route::prefix('payment-methods')->name('payment-methods.')->group(function () {
