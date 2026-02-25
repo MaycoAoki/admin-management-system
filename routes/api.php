@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
@@ -15,6 +17,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
-        // Protected routes will be added here
+        Route::get('dashboard', [DashboardController::class, 'show'])->name('dashboard');
+
+        Route::prefix('invoices')->name('invoices.')->group(function () {
+            Route::get('/', [InvoiceController::class, 'index'])->name('index');
+            Route::get('{id}', [InvoiceController::class, 'show'])->name('show');
+        });
     });
 });

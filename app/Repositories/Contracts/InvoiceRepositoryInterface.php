@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
+use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -9,7 +10,9 @@ use Illuminate\Support\Collection;
 interface InvoiceRepositoryInterface
 {
     /** @return LengthAwarePaginator<Invoice> */
-    public function paginateForUser(int $userId, int $perPage = 15): LengthAwarePaginator;
+    public function paginateForUser(int $userId, int $perPage = 15, ?InvoiceStatus $status = null): LengthAwarePaginator;
+
+    public function findByIdWithRelations(int $id): ?Invoice;
 
     public function findById(int $id): ?Invoice;
 

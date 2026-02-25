@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -11,12 +12,20 @@ use Illuminate\Support\Facades\DB;
 class InvoiceRepository implements InvoiceRepositoryInterface
 {
     /** @return LengthAwarePaginator<Invoice> */
-    public function paginateForUser(int $userId, int $perPage = 15): LengthAwarePaginator
+    public function paginateForUser(int $userId, int $perPage = 15, ?InvoiceStatus $status = null): LengthAwarePaginator
     {
         return Invoice::query()
             ->forUser($userId)
+            ->when($status, fn ($q) => $q->where('status', $status))
             ->latest('due_date')
             ->paginate($perPage);
+    }
+
+    public function findByIdWithRelations(int $id): ?Invoice
+    {
+        return Invoice::query()
+            ->with(['subscription.plan', 'payments' => fn ($q) => $q->latest()])
+            ->find($id);
     }
 
     public function findById(int $id): ?Invoice
