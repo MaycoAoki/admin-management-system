@@ -18,6 +18,11 @@ class StubGateway implements PaymentGatewayInterface
         return 'stub_token_'.Str::random(20);
     }
 
+    public function openDispute(Payment $payment, string $reason): string
+    {
+        return 'stub_dispute_'.Str::random(16);
+    }
+
     public function charge(Payment $payment, ?PaymentMethod $paymentMethod = null): GatewayResponse
     {
         $gatewayId = 'stub_'.Str::uuid();

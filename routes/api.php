@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DisputeController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentMethodController;
@@ -32,6 +33,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::prefix('payments')->name('payments.')->group(function () {
             Route::get('/', [PaymentController::class, 'index'])->name('index');
             Route::get('{id}', [PaymentController::class, 'show'])->name('show');
+            Route::post('{id}/disputes', [DisputeController::class, 'store'])->name('disputes.store');
         });
 
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
@@ -41,6 +43,12 @@ Route::prefix('v1')->name('v1.')->group(function () {
             Route::post('/', [SubscriptionController::class, 'store'])->name('store');
             Route::patch('plan', [SubscriptionController::class, 'changePlan'])->name('change-plan');
             Route::delete('/', [SubscriptionController::class, 'cancel'])->name('cancel');
+        });
+
+        Route::prefix('disputes')->name('disputes.')->group(function () {
+            Route::get('/', [DisputeController::class, 'index'])->name('index');
+            Route::get('{id}', [DisputeController::class, 'show'])->name('show');
+            Route::delete('{id}', [DisputeController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('payment-methods')->name('payment-methods.')->group(function () {

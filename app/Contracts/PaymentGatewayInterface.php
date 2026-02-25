@@ -12,4 +12,6 @@ interface PaymentGatewayInterface
 
     /** @param array<string, mixed> $attributes */
     public function tokenize(array $attributes): string;
+
+    public function openDispute(Payment $payment, string $reason): string;
 }
