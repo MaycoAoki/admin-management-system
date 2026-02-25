@@ -16,6 +16,8 @@ interface PaymentRepositoryInterface
 
     public function findById(int $id): ?Payment;
 
+    public function findByIdWithRelations(int $id): ?Payment;
+
     public function findByGatewayPaymentId(string $gatewayPaymentId): ?Payment;
 
     /** @param array<string, mixed> $attributes */

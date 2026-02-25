@@ -32,6 +32,11 @@ class PaymentRepository implements PaymentRepositoryInterface
         return Payment::query()->find($id);
     }
 
+    public function findByIdWithRelations(int $id): ?Payment
+    {
+        return Payment::query()->with('invoice')->find($id);
+    }
+
     public function findByGatewayPaymentId(string $gatewayPaymentId): ?Payment
     {
         return Payment::query()->where('gateway_payment_id', $gatewayPaymentId)->first();

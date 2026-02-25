@@ -9,4 +9,15 @@ enum PaymentMethodType: string
     case Pix = 'pix';
     case Boleto = 'boleto';
     case BankDebit = 'bank_debit';
+
+    /** @return list<string> */
+    public static function values(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
+
+    public function requiresStoredMethod(): bool
+    {
+        return in_array($this, [self::CreditCard, self::DebitCard], true);
+    }
 }
