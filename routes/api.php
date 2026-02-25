@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PaymentMethodController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('v1.')->group(function () {
@@ -29,6 +30,14 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::prefix('payments')->name('payments.')->group(function () {
             Route::get('/', [PaymentController::class, 'index'])->name('index');
             Route::get('{id}', [PaymentController::class, 'show'])->name('show');
+        });
+
+        Route::prefix('payment-methods')->name('payment-methods.')->group(function () {
+            Route::get('/', [PaymentMethodController::class, 'index'])->name('index');
+            Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
+            Route::get('{id}', [PaymentMethodController::class, 'show'])->name('show');
+            Route::delete('{id}', [PaymentMethodController::class, 'destroy'])->name('destroy');
+            Route::patch('{id}/default', [PaymentMethodController::class, 'setDefault'])->name('set-default');
         });
     });
 });

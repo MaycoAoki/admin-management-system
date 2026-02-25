@@ -9,4 +9,7 @@ use App\Models\PaymentMethod;
 interface PaymentGatewayInterface
 {
     public function charge(Payment $payment, ?PaymentMethod $paymentMethod = null): GatewayResponse;
+
+    /** @param array<string, mixed> $attributes */
+    public function tokenize(array $attributes): string;
 }

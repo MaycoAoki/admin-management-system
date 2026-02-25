@@ -25,4 +25,6 @@ interface PaymentRepositoryInterface
 
     /** @param array<string, mixed> $attributes */
     public function update(Payment $payment, array $attributes): Payment;
+
+    public function hasPendingForPaymentMethod(int $paymentMethodId): bool;
 }

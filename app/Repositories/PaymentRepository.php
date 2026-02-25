@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\PaymentStatus;
 use App\Models\Payment;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -54,5 +55,13 @@ class PaymentRepository implements PaymentRepositoryInterface
         $payment->update($attributes);
 
         return $payment->fresh();
+    }
+
+    public function hasPendingForPaymentMethod(int $paymentMethodId): bool
+    {
+        return Payment::query()
+            ->where('payment_method_id', $paymentMethodId)
+            ->where('status', PaymentStatus::Pending)
+            ->exists();
     }
 }

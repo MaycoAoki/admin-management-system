@@ -12,6 +12,12 @@ use Illuminate\Support\Str;
 
 class StubGateway implements PaymentGatewayInterface
 {
+    /** @param array<string, mixed> $attributes */
+    public function tokenize(array $attributes): string
+    {
+        return 'stub_token_'.Str::random(20);
+    }
+
     public function charge(Payment $payment, ?PaymentMethod $paymentMethod = null): GatewayResponse
     {
         $gatewayId = 'stub_'.Str::uuid();
