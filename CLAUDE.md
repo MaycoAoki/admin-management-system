@@ -1,3 +1,57 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+This is a **billing self-service portal** (Portal de Autoatendimento de Faturamento) — a Laravel 12 API backend for a SaaS subscription management product. The full PRD is in `docs/PRD.md`. Core features: invoice dashboard, payments (PIX/boleto/card/debit), subscription management (upgrade/downgrade/cancel), payment method management, disputes, and dunning notifications.
+
+## Development Commands
+
+```bash
+# Initial setup
+composer run setup
+
+# Start all services (PHP, queue, pail log viewer, Vite)
+composer run dev
+
+# Or via Docker
+docker compose up -d
+
+# Run tests
+php artisan test --compact
+php artisan test --compact --filter=testName
+
+# Format PHP (run after every PHP file change)
+vendor/bin/pint --dirty --format agent
+
+# Build frontend assets
+npm run build
+```
+
+## Infrastructure (Docker)
+
+Services defined in `docker-compose.yml`:
+- **app** — PHP-FPM (Dockerfile.dev / Dockerfile.prod)
+- **nginx** — Web server, port `8080`
+- **postgres** — PostgreSQL 16, port `5433`, database `admin_management_system`
+- **redis** — Redis 7, port `6379` (cache + queues)
+- **queue** — Laravel queue worker (`redis` connection, 3 tries)
+- **scheduler** — Runs `schedule:run` every 60s
+- **vite** — Node 22, port `5173`
+- **mailpit** — Email testing UI at port `8025`, SMTP at `1025`
+
+`docker-compose.override.yml` adds Xdebug on port `9003`.
+
+## Architecture
+
+- **API-first**: all application logic is exposed via `routes/api.php`. Sanctum (`auth:sanctum`) guards authenticated endpoints.
+- **Database**: PostgreSQL (not SQLite). Use `database-schema` tool before writing migrations.
+- **Queues/Jobs**: async work must use `ShouldQueue`. Queue driver is Redis.
+- **Validation**: always use Form Request classes (`app/Http/Requests/`); never inline validation.
+- **API responses**: use Eloquent API Resources with versioning (e.g., `app/Http/Resources/V1/`).
+- **Models**: use the `casts()` method (not `$casts` property) per Laravel 12 convention.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
