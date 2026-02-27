@@ -66,6 +66,25 @@ class InvoiceRepository implements InvoiceRepositoryInterface
             ->sum(DB::raw('amount_in_cents - amount_paid_in_cents'));
     }
 
+    /** @return Collection<int, Invoice> */
+    public function dueSoon(int $daysAhead = 3): Collection
+    {
+        return Invoice::query()
+            ->with('user')
+            ->open()
+            ->whereDate('due_date', now()->addDays($daysAhead)->toDateString())
+            ->get();
+    }
+
+    /** @return Collection<int, Invoice> */
+    public function overdue(): Collection
+    {
+        return Invoice::query()
+            ->with('user')
+            ->overdue()
+            ->get();
+    }
+
     /** @param array<string, mixed> $attributes */
     public function create(array $attributes): Invoice
     {

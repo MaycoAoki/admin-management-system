@@ -25,6 +25,12 @@ interface InvoiceRepositoryInterface
 
     public function outstandingBalanceForUser(int $userId): int;
 
+    /** @return Collection<int, Invoice> */
+    public function dueSoon(int $daysAhead = 3): Collection;
+
+    /** @return Collection<int, Invoice> */
+    public function overdue(): Collection;
+
     /** @param array<string, mixed> $attributes */
     public function create(array $attributes): Invoice;
 

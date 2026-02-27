@@ -7,6 +7,8 @@ use App\DTOs\InitiatePaymentData;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
+use App\Notifications\PaymentFailedNotification;
+use App\Notifications\PaymentSucceededNotification;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
@@ -101,6 +103,10 @@ final class InitiatePayment
                     'status' => $isFullyPaid ? InvoiceStatus::Paid : InvoiceStatus::Open,
                     'paid_at' => $isFullyPaid ? now() : null,
                 ]);
+
+                $payment->user->notify(new PaymentSucceededNotification($payment));
+            } elseif ($response->status === PaymentStatus::Failed) {
+                $payment->user->notify(new PaymentFailedNotification($payment));
             }
 
             return $payment;
