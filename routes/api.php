@@ -42,6 +42,8 @@ Route::prefix('v1')->name('v1.')->group(function () {
             Route::get('/', [SubscriptionController::class, 'show'])->name('show');
             Route::post('/', [SubscriptionController::class, 'store'])->name('store');
             Route::patch('plan', [SubscriptionController::class, 'changePlan'])->name('change-plan');
+            Route::patch('auto-pay', [SubscriptionController::class, 'updateAutoPay'])->name('update-auto-pay');
+            Route::patch('auto-renew', [SubscriptionController::class, 'updateAutoRenew'])->name('update-auto-renew');
             Route::delete('/', [SubscriptionController::class, 'cancel'])->name('cancel');
         });
 

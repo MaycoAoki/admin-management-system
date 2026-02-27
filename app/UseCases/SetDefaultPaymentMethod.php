@@ -11,6 +11,7 @@ final class SetDefaultPaymentMethod
 {
     public function __construct(
         private readonly PaymentMethodRepositoryInterface $paymentMethodRepository,
+        private readonly SyncSubscriptionAutoPay $syncSubscriptionAutoPay,
     ) {}
 
     /**
@@ -30,6 +31,7 @@ final class SetDefaultPaymentMethod
         }
 
         $this->paymentMethodRepository->setDefault($paymentMethod);
+        $this->syncSubscriptionAutoPay->execute($userId);
 
         return $paymentMethod->fresh();
     }

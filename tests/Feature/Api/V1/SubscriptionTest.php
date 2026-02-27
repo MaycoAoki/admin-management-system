@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\SubscriptionStatus;
+use App\Models\PaymentMethod;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -161,6 +162,123 @@ describe('PATCH /api/v1/subscription/plan', function () {
     });
 });
 
+describe('PATCH /api/v1/subscription/auto-pay', function () {
+    it('enables auto pay when the user has an eligible default payment method', function () {
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+            'auto_pay' => false,
+        ]);
+        PaymentMethod::factory()->creditCard()->asDefault()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-pay', ['auto_pay' => true])
+            ->assertSuccessful()
+            ->assertJsonPath('data.auto_pay', true);
+
+        expect(Subscription::query()->where('user_id', $user->id)->first())
+            ->auto_pay->toBeTrue();
+    });
+
+    it('disables auto pay for the active subscription', function () {
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+            'auto_pay' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-pay', ['auto_pay' => false])
+            ->assertSuccessful()
+            ->assertJsonPath('data.auto_pay', false);
+    });
+
+    it('returns 422 when enabling auto pay without an eligible default payment method', function () {
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+        ]);
+        PaymentMethod::factory()->pix()->asDefault()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-pay', ['auto_pay' => true])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.auto_pay.0', 'Auto-pay requires an eligible default payment method.');
+    });
+
+    it('returns 422 when user has no active subscription', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-pay', ['auto_pay' => true])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.subscription.0', 'No active subscription found.');
+    });
+
+    it('validates the auto_pay payload', function () {
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-pay', ['auto_pay' => 'maybe'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.auto_pay.0', 'The auto_pay field must be true or false.');
+    });
+
+    it('requires authentication', function () {
+        $this->patchJson('/api/v1/subscription/auto-pay', [])->assertUnauthorized();
+    });
+});
+
+describe('PATCH /api/v1/subscription/auto-renew', function () {
+    it('updates the auto renew flag for the active subscription', function () {
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+            'auto_renew' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-renew', ['auto_renew' => false])
+            ->assertSuccessful()
+            ->assertJsonPath('data.auto_renew', false);
+
+        expect(Subscription::query()->where('user_id', $user->id)->first())
+            ->auto_renew->toBeFalse();
+    });
+
+    it('returns 422 when user has no active subscription', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-renew', ['auto_renew' => false])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.subscription.0', 'No active subscription found.');
+    });
+
+    it('validates the auto_renew payload', function () {
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/v1/subscription/auto-renew', ['auto_renew' => 'maybe'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.auto_renew.0', 'The auto_renew field must be true or false.');
+    });
+
+    it('requires authentication', function () {
+        $this->patchJson('/api/v1/subscription/auto-renew', [])->assertUnauthorized();
+    });
+});
+
 describe('DELETE /api/v1/subscription', function () {
     it('cancels the subscription and sets cancel_at to period end', function () {
         $user = User::factory()->create();
@@ -175,7 +293,8 @@ describe('DELETE /api/v1/subscription', function () {
         expect($fresh->status)->toBe(SubscriptionStatus::Canceled)
             ->and($fresh->canceled_at)->not->toBeNull()
             ->and($fresh->cancel_at->toDateString())->toBe($subscription->current_period_end->toDateString())
-            ->and($fresh->auto_renew)->toBeFalse();
+            ->and($fresh->auto_renew)->toBeFalse()
+            ->and($fresh->auto_pay)->toBeFalse();
     });
 
     it('returns 422 when user has no active subscription', function () {

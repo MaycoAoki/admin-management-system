@@ -26,6 +26,7 @@ class SubscriptionSummaryResource extends JsonResource
             'price_formatted' => $this->formatCurrency($this->plan->price_in_cents, $this->plan->currency),
             'current_period_end' => $this->current_period_end,
             'auto_renew' => $this->auto_renew,
+            'auto_pay' => $this->auto_pay,
             'is_trial' => $this->status === SubscriptionStatus::Trialing,
             'trial_ends_at' => $this->trial_ends_at,
         ];

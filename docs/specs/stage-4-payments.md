@@ -46,6 +46,14 @@ app/
 
 `AppServiceProvider` faz o binding `PaymentGatewayInterface → StubGateway`. Para produção, bastará criar `AsaasGateway` (ou similar) e trocar o binding.
 
+### Automação de Cobrança
+
+O módulo também suporta tentativas automáticas usando o mesmo `InitiatePayment`:
+
+- `billing:process-upcoming-auto-pay` tenta cobrar faturas abertas com vencimento entre hoje e a janela configurada.
+- `billing:process-dunning` tenta cobrar faturas já vencidas antes de enviar `InvoiceOverdueNotification`.
+- A janela padrão da cobrança antecipada vem de `config/billing.php` (`BILLING_AUTO_PAY_ADVANCE_DAYS`), mas pode ser sobrescrita via `--days`.
+
 ---
 
 ## Endpoint 1 — Iniciar Pagamento

@@ -2,12 +2,11 @@
 
 namespace App\UseCases;
 
-use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
 use App\Repositories\Contracts\SubscriptionRepositoryInterface;
 use Illuminate\Validation\ValidationException;
 
-final class CancelSubscription
+final class UpdateSubscriptionAutoRenew
 {
     public function __construct(
         private readonly SubscriptionRepositoryInterface $subscriptionRepository,
@@ -16,7 +15,7 @@ final class CancelSubscription
     /**
      * @throws ValidationException
      */
-    public function execute(int $userId): Subscription
+    public function execute(int $userId, bool $autoRenew): Subscription
     {
         $subscription = $this->subscriptionRepository->findActiveForUser($userId);
 
@@ -27,11 +26,7 @@ final class CancelSubscription
         }
 
         $subscription = $this->subscriptionRepository->update($subscription, [
-            'status' => SubscriptionStatus::Canceled,
-            'canceled_at' => now(),
-            'cancel_at' => $subscription->current_period_end,
-            'auto_renew' => false,
-            'auto_pay' => false,
+            'auto_renew' => $autoRenew,
         ]);
 
         $subscription->load('plan');

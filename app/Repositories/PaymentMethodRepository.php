@@ -47,7 +47,27 @@ class PaymentMethodRepository implements PaymentMethodRepositoryInterface
 
     public function delete(PaymentMethod $paymentMethod): void
     {
-        $paymentMethod->delete();
+        DB::transaction(function () use ($paymentMethod) {
+            $userId = $paymentMethod->user_id;
+            $wasDefault = $paymentMethod->is_default;
+
+            $paymentMethod->delete();
+
+            if (! $wasDefault) {
+                return;
+            }
+
+            $replacement = PaymentMethod::query()
+                ->where('user_id', $userId)
+                ->orderByDesc('created_at')
+                ->first();
+
+            if (! $replacement) {
+                return;
+            }
+
+            $replacement->update(['is_default' => true]);
+        });
     }
 
     public function setDefault(PaymentMethod $paymentMethod): void

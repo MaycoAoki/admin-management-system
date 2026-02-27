@@ -2,21 +2,22 @@
 
 namespace App\UseCases;
 
-use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
+use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
 use App\Repositories\Contracts\SubscriptionRepositoryInterface;
 use Illuminate\Validation\ValidationException;
 
-final class CancelSubscription
+final class UpdateSubscriptionAutoPay
 {
     public function __construct(
         private readonly SubscriptionRepositoryInterface $subscriptionRepository,
+        private readonly PaymentMethodRepositoryInterface $paymentMethodRepository,
     ) {}
 
     /**
      * @throws ValidationException
      */
-    public function execute(int $userId): Subscription
+    public function execute(int $userId, bool $autoPay): Subscription
     {
         $subscription = $this->subscriptionRepository->findActiveForUser($userId);
 
@@ -26,12 +27,18 @@ final class CancelSubscription
             ]);
         }
 
+        if ($autoPay) {
+            $defaultPaymentMethod = $this->paymentMethodRepository->findDefaultForUser($userId);
+
+            if (! $defaultPaymentMethod || ! $defaultPaymentMethod->type->supportsAutomaticCharge()) {
+                throw ValidationException::withMessages([
+                    'auto_pay' => ['Auto-pay requires an eligible default payment method.'],
+                ]);
+            }
+        }
+
         $subscription = $this->subscriptionRepository->update($subscription, [
-            'status' => SubscriptionStatus::Canceled,
-            'canceled_at' => now(),
-            'cancel_at' => $subscription->current_period_end,
-            'auto_renew' => false,
-            'auto_pay' => false,
+            'auto_pay' => $autoPay,
         ]);
 
         $subscription->load('plan');

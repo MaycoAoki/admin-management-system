@@ -77,6 +77,18 @@ class InvoiceRepository implements InvoiceRepositoryInterface
     }
 
     /** @return Collection<int, Invoice> */
+    public function upcomingForAutoPay(int $daysAhead = 1): Collection
+    {
+        return Invoice::query()
+            ->with('user')
+            ->open()
+            ->whereDate('due_date', '>=', now()->toDateString())
+            ->whereDate('due_date', '<=', now()->addDays($daysAhead)->toDateString())
+            ->orderBy('due_date')
+            ->get();
+    }
+
+    /** @return Collection<int, Invoice> */
     public function overdue(): Collection
     {
         return Invoice::query()

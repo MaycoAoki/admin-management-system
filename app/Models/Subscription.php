@@ -26,6 +26,7 @@ class Subscription extends Model
         'canceled_at',
         'cancel_at',
         'auto_renew',
+        'auto_pay',
         'gateway_subscription_id',
         'metadata',
     ];
@@ -35,6 +36,7 @@ class Subscription extends Model
         return [
             'status' => SubscriptionStatus::class,
             'auto_renew' => 'boolean',
+            'auto_pay' => 'boolean',
             'current_period_start' => 'datetime',
             'current_period_end' => 'datetime',
             'trial_ends_at' => 'datetime',

@@ -29,6 +29,9 @@ interface InvoiceRepositoryInterface
     public function dueSoon(int $daysAhead = 3): Collection;
 
     /** @return Collection<int, Invoice> */
+    public function upcomingForAutoPay(int $daysAhead = 1): Collection;
+
+    /** @return Collection<int, Invoice> */
     public function overdue(): Collection;
 
     /** @param array<string, mixed> $attributes */

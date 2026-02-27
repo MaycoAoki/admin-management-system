@@ -13,6 +13,7 @@ final class RemovePaymentMethod
     public function __construct(
         private readonly PaymentMethodRepositoryInterface $paymentMethodRepository,
         private readonly PaymentRepositoryInterface $paymentRepository,
+        private readonly SyncSubscriptionAutoPay $syncSubscriptionAutoPay,
     ) {}
 
     /**
@@ -39,5 +40,6 @@ final class RemovePaymentMethod
         }
 
         $this->paymentMethodRepository->delete($paymentMethod);
+        $this->syncSubscriptionAutoPay->execute($userId);
     }
 }

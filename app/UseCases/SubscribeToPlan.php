@@ -51,6 +51,7 @@ final class SubscribeToPlan
             'current_period_end' => $end,
             'trial_ends_at' => $isTrial ? $start->copy()->addDays($plan->trial_days) : null,
             'auto_renew' => true,
+            'auto_pay' => false,
         ]);
 
         $subscription->load('plan');

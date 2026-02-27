@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Notifications\InvoiceOverdueNotification;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\UseCases\ProcessInvoiceAutoPay;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -10,11 +9,12 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
 
-class ProcessDunning extends Command
+class ProcessUpcomingAutoPay extends Command
 {
-    protected $signature = 'billing:process-dunning';
+    protected $signature = 'billing:process-upcoming-auto-pay
+                            {--days= : Number of days ahead eligible for automatic charge}';
 
-    protected $description = 'Send dunning notifications for all overdue invoices';
+    protected $description = 'Attempt automatic charges for invoices that are due soon';
 
     public function __construct(
         private readonly InvoiceRepositoryInterface $invoiceRepository,
@@ -25,22 +25,21 @@ class ProcessDunning extends Command
 
     public function handle(): int
     {
-        $invoices = $this->invoiceRepository->overdue();
+        $daysOption = $this->option('days');
+        $daysAhead = $daysOption !== null
+            ? (int) $daysOption
+            : (int) config('billing.auto_pay.advance_days', 1);
+        $invoices = $this->invoiceRepository->upcomingForAutoPay($daysAhead);
 
-        $this->info("Found {$invoices->count()} overdue invoice(s).");
+        $this->info("Found {$invoices->count()} invoice(s) eligible in the next {$daysAhead} day(s).");
 
         foreach ($invoices as $invoice) {
             try {
                 if ($this->processInvoiceAutoPay->execute($invoice)) {
                     $this->line("  -> Auto-paid invoice #{$invoice->invoice_number} for user #{$invoice->user_id}");
-
-                    continue;
                 }
             } catch (AuthorizationException|ModelNotFoundException|ValidationException) {
             }
-
-            $invoice->user->notify(new InvoiceOverdueNotification($invoice));
-            $this->line("  -> Notified user #{$invoice->user_id} for invoice #{$invoice->invoice_number}");
         }
 
         $this->info('Done.');

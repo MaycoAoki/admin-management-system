@@ -3,7 +3,10 @@
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\Subscription;
 use App\Models\User;
+use App\Notifications\AutoPayDisabledNotification;
+use Illuminate\Support\Facades\Notification;
 
 describe('GET /api/v1/payment-methods', function () {
     it('returns payment methods for the authenticated user', function () {
@@ -199,6 +202,39 @@ describe('DELETE /api/v1/payment-methods/{id}', function () {
         expect(PaymentMethod::withTrashed()->find($method->id)->deleted_at)->not->toBeNull();
     });
 
+    it('promotes another method to default when deleting the current default', function () {
+        $user = User::factory()->create();
+        $defaultMethod = PaymentMethod::factory()->creditCard()->asDefault()->create(['user_id' => $user->id]);
+        $replacement = PaymentMethod::factory()->creditCard()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/v1/payment-methods/{$defaultMethod->id}")
+            ->assertNoContent();
+
+        expect($replacement->fresh()->is_default)->toBeTrue();
+    });
+
+    it('disables auto pay when deleting the default method leaves no eligible default', function () {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+            'auto_pay' => true,
+        ]);
+        $defaultMethod = PaymentMethod::factory()->creditCard()->asDefault()->create(['user_id' => $user->id]);
+        PaymentMethod::factory()->pix()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/v1/payment-methods/{$defaultMethod->id}")
+            ->assertNoContent();
+
+        expect(Subscription::query()->where('user_id', $user->id)->first())
+            ->auto_pay->toBeFalse();
+
+        Notification::assertSentTo($user, AutoPayDisabledNotification::class);
+    });
+
     it('returns 403 when method belongs to another user', function () {
         $user = User::factory()->create();
         $other = User::factory()->create();
@@ -253,6 +289,53 @@ describe('PATCH /api/v1/payment-methods/{id}/default', function () {
 
         expect($first->fresh()->is_default)->toBeFalse();
         expect($second->fresh()->is_default)->toBeTrue();
+    });
+
+    it('disables auto pay when switching the default method to an ineligible type', function () {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+            'auto_pay' => true,
+        ]);
+        PaymentMethod::factory()->creditCard()->asDefault()->create(['user_id' => $user->id]);
+        $pixMethod = PaymentMethod::factory()->pix()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->patchJson("/api/v1/payment-methods/{$pixMethod->id}/default")
+            ->assertSuccessful()
+            ->assertJsonPath('data.id', $pixMethod->id)
+            ->assertJsonPath('data.is_default', true);
+
+        expect(Subscription::query()->where('user_id', $user->id)->first())
+            ->auto_pay->toBeFalse();
+
+        Notification::assertSentTo($user, AutoPayDisabledNotification::class);
+    });
+
+    it('keeps auto pay enabled when switching the default method to another eligible type', function () {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        Subscription::factory()->active()->create([
+            'user_id' => $user->id,
+            'auto_pay' => true,
+        ]);
+        $first = PaymentMethod::factory()->creditCard()->asDefault()->create(['user_id' => $user->id]);
+        $second = PaymentMethod::factory()->creditCard()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->patchJson("/api/v1/payment-methods/{$second->id}/default")
+            ->assertSuccessful()
+            ->assertJsonPath('data.id', $second->id)
+            ->assertJsonPath('data.is_default', true);
+
+        expect($first->fresh()->is_default)->toBeFalse();
+        expect(Subscription::query()->where('user_id', $user->id)->first())
+            ->auto_pay->toBeTrue();
+
+        Notification::assertNotSentTo($user, AutoPayDisabledNotification::class);
     });
 
     it('returns 403 when method belongs to another user', function () {

@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Implementar o gerenciamento de assinatura do cliente: visualização da assinatura ativa, listagem de planos disponíveis, contratação de um plano, troca de plano (upgrade/downgrade) e cancelamento. A lógica de faturamento (geração de faturas, cobranças recorrentes) é responsabilidade do sistema de billing interno e **não** faz parte deste módulo — os endpoints aqui apenas gerenciam o estado da assinatura.
+Implementar o gerenciamento de assinatura do cliente: visualização da assinatura ativa, listagem de planos disponíveis, contratação de um plano, troca de plano (upgrade/downgrade), configuração de auto-pay e cancelamento. A lógica de faturamento (geração de faturas, cobranças recorrentes) continua centralizada no sistema de billing, mas este módulo expõe as preferências que controlam as tentativas automáticas.
 
 ---
 
@@ -14,7 +14,8 @@ Implementar o gerenciamento de assinatura do cliente: visualização da assinatu
 | 2 | `GET /api/v1/subscription` | Assinatura ativa do usuário |
 | 3 | `POST /api/v1/subscription` | Contratar um plano |
 | 4 | `PATCH /api/v1/subscription/plan` | Trocar de plano (upgrade ou downgrade) |
-| 5 | `DELETE /api/v1/subscription` | Cancelar assinatura |
+| 5 | `PATCH /api/v1/subscription/auto-pay` | Ativar ou desativar auto-pay da assinatura ativa |
+| 6 | `DELETE /api/v1/subscription` | Cancelar assinatura |
 
 ---
 
@@ -23,10 +24,11 @@ Implementar o gerenciamento de assinatura do cliente: visualização da assinatu
 ```
 Route (auth:sanctum)
  └─► SubscriptionController
-      ├─► SubscribeToPlanRequest / ChangePlanRequest
+      ├─► SubscribeToPlanRequest / ChangePlanRequest / UpdateAutoPayRequest
       └─► UseCase::execute()
            ├─► PlanRepository
-           └─► SubscriptionRepository
+           ├─► SubscriptionRepository
+           └─► PaymentMethodRepository (auto-pay)
 ```
 
 ### Novos arquivos
@@ -38,6 +40,7 @@ app/
     GetCurrentSubscription.php
     SubscribeToPlan.php
     ChangePlan.php
+    UpdateSubscriptionAutoPay.php
     CancelSubscription.php
   Http/
     Controllers/Api/V1/
@@ -46,6 +49,7 @@ app/
     Requests/
       SubscribeToPlanRequest.php
       ChangePlanRequest.php
+      UpdateAutoPayRequest.php
     Resources/V1/
       PlanResource.php
       SubscriptionResource.php
@@ -106,6 +110,7 @@ Retorna a assinatura ativa (`active` ou `trialing`) do usuário. Inclui o plano 
     "id": 3,
     "status": "active",
     "auto_renew": true,
+    "auto_pay": false,
     "current_period_start": "2026-02-01T00:00:00.000000Z",
     "current_period_end": "2026-03-01T00:00:00.000000Z",
     "trial_ends_at": null,
@@ -157,6 +162,7 @@ Cria uma nova assinatura para o usuário.
 | Status padrão | Se sem trial, status = `active` |
 | Período | `current_period_start = now()`, `current_period_end` calculado pelo `billing_cycle` do plano |
 | `auto_renew` | `true` por padrão |
+| `auto_pay` | `false` por padrão; requer ativação explícita |
 | Plano inativo | Retorna `422` (tratado pela validação `exists` + escopo) |
 
 #### Cálculo do `current_period_end` por `billing_cycle`
@@ -176,6 +182,7 @@ Cria uma nova assinatura para o usuário.
     "id": 4,
     "status": "trialing",
     "auto_renew": true,
+    "auto_pay": false,
     "current_period_start": "2026-02-24T00:00:00.000000Z",
     "current_period_end": "2026-03-24T00:00:00.000000Z",
     "trial_ends_at": "2026-03-10T00:00:00.000000Z",
@@ -247,7 +254,55 @@ Muda o plano da assinatura ativa. A troca tem efeito imediato — o novo `curren
 
 ---
 
-## Endpoint 5 — Cancelar Assinatura
+## Endpoint 5 — Configurar Auto-Pay
+
+### `PATCH /api/v1/subscription/auto-pay`
+
+Ativa ou desativa a cobrança automática da assinatura ativa.
+
+#### Request Body
+
+```json
+{ "auto_pay": true }
+```
+
+| Campo | Tipo | Regra |
+|-------|------|-------|
+| `auto_pay` | boolean | Obrigatório. |
+
+#### Regras de Negócio
+
+| Regra | Detalhe |
+|-------|---------|
+| Sem assinatura ativa | Retorna `422` com "No active subscription found." |
+| Ativação | Exige método de pagamento padrão elegível para cobrança automática (`credit_card`, `debit_card` ou `bank_debit`) |
+| Desativação | Pode ser feita mesmo sem método padrão |
+
+#### Resposta `200 OK`
+
+```json
+{
+  "data": {
+    "id": 3,
+    "status": "active",
+    "auto_renew": true,
+    "auto_pay": true,
+    "plan": { ... }
+  }
+}
+```
+
+#### Respostas de Erro
+
+| Status | Cenário |
+|--------|---------|
+| `401` | Não autenticado |
+| `422` | Sem assinatura ativa |
+| `422` | Método padrão ausente ou inelegível |
+
+---
+
+## Endpoint 6 — Cancelar Assinatura
 
 ### `DELETE /api/v1/subscription`
 
@@ -258,7 +313,7 @@ Cancela a assinatura ativa. O acesso continua até o fim do período corrente (`
 | Regra | Detalhe |
 |-------|---------|
 | Sem assinatura ativa | Retorna `422` com "No active subscription found." |
-| Cancelamento | `status = canceled`, `canceled_at = now()`, `cancel_at = current_period_end`, `auto_renew = false` |
+| Cancelamento | `status = canceled`, `canceled_at = now()`, `cancel_at = current_period_end`, `auto_renew = false`, `auto_pay = false` |
 | Idempotência | Assinatura já cancelada retorna `422` (status `canceled` não é `active`/`trialing`) |
 
 #### Resposta `200 OK`
@@ -271,6 +326,7 @@ Cancela a assinatura ativa. O acesso continua até o fim do período corrente (`
     "canceled_at": "2026-02-24T00:00:00.000000Z",
     "cancel_at": "2026-03-01T00:00:00.000000Z",
     "auto_renew": false,
+    "auto_pay": false,
     "plan": { ... }
   }
 }
@@ -309,6 +365,8 @@ public function findActiveForUserWithPlan(int $userId): ?Subscription;
 | Troca de plano com sucesso | PATCH plan |
 | Retorna 422 se sem assinatura ativa | PATCH plan |
 | Retorna 422 se mesmo plano | PATCH plan |
+| Ativa auto-pay com método padrão elegível | PATCH auto-pay |
+| Retorna 422 se auto-pay sem método padrão elegível | PATCH auto-pay |
 | Cancela assinatura → `canceled` + `cancel_at` preenchido | DELETE |
 | Retorna 422 se sem assinatura ativa para cancelar | DELETE |
 | Todos os endpoints requerem autenticação | todos |

@@ -29,6 +29,7 @@ class SubscriptionFactory extends Factory
             'canceled_at' => null,
             'cancel_at' => null,
             'auto_renew' => true,
+            'auto_pay' => false,
         ];
     }
 

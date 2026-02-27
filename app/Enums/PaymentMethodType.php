@@ -20,4 +20,9 @@ enum PaymentMethodType: string
     {
         return in_array($this, [self::CreditCard, self::DebitCard], true);
     }
+
+    public function supportsAutomaticCharge(): bool
+    {
+        return in_array($this, [self::CreditCard, self::DebitCard, self::BankDebit], true);
+    }
 }
